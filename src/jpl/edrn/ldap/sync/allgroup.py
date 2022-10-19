@@ -46,7 +46,7 @@ def main():
         current_members = set([str(i, 'utf-8') for i in current_members[0][1]['uniqueMember']])
     except KeyError:
         # Apache DS returns the key ``uniquemember`` with lowercase ``m``
-        current_members = set([str(i, 'utf-8') for i in current_members[0][1]['uniqueMember']])
+        current_members = set([str(i, 'utf-8') for i in current_members[0][1]['uniquemember']])
 
     to_add = all_users - current_members
     to_remove = current_members - all_users

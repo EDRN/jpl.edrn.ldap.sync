@@ -1,6 +1,10 @@
-# 👯‍♀️ EDRN LDAP Sync
+# ☎️ EDRN LDAP Sync
 
-This package updates the `All EDRN` group in the [EDRN](https://edrn.nci.nih.gov/) directory service. It scans for all users and keeps the group `All EDRN` updated so that every user is a member of the group.
+This package contains utilities for the dirctory service of the [EDRN](https://edrn.nci.nih.gov/). There are three console scripts provided:
+
+-   `usersync` — adds and removes users from the EDRN RDF feed for registered people
+-   `groupsync` — adds and updates funded sites and collaborative groups from the EDRN RDF feeds for sites and committees
+-   `all-edrn-sync` — keeps the `All EDRN` group up-to-date
 
 
 ## 🚗 Getting Started
@@ -13,7 +17,7 @@ $ venv/bin/pip install --quiet --upgrade setuptools pip wheel
 $ venv/bin/pip install --editable .
 ```
 
-and you should be good to go to run `venv/bin/edrn-ldap-sync`.
+and you should be good to go to run the three scripts mentioned above out of `venv/bin`.
 
 
 ## 🎥 Production Use
@@ -21,9 +25,10 @@ and you should be good to go to run `venv/bin/edrn-ldap-sync`.
 Just add a crontab entry like the following:
 
 ```crontab
-@hourly /usr/local/edrn/edrn/all-edrn-sync/bin --password PASSWORD
+@daily /usr/local/edrn/edrn/ldap-sync-utils/bin/usersync --password PASSWORD --quiet
+@daily /usr/local/edrn/edrn/ldap-sync-utils/bin/groupsync --password PASSWORD --quiet
+@hourly /usr/local/edrn/edrn/ldap-sync-utils/bin/all-edrn-sync --password PASSWORD --quiet
 ```
-
 replacing PASSWORD with the password of the manager account of the EDRN Directory Service.
 
 

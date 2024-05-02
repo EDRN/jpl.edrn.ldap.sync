@@ -3,8 +3,9 @@
 '''☎️ EDRN LDAP Sync: Resource Description Format classes and functions.'''
 
 
-import rdflib, logging, enum
 from dataclasses import dataclass
+import rdflib, logging, enum
+from urllib.parse import urlparse
 
 _logger = logging.getLogger(__name__)
 
@@ -19,8 +20,10 @@ _com_type_pred_uri = rdflib.term.URIRef('http://edrn.nci.nih.gov/xml/rdf/edrn.rd
 _email_pred_uri    = rdflib.term.URIRef('http://xmlns.com/foaf/0.1/mbox')
 _gn_pred_uri       = rdflib.term.URIRef('http://xmlns.com/foaf/0.1/givenname')
 _member_pred_uri   = rdflib.term.URIRef('http://edrn.nci.nih.gov/xml/rdf/edrn.rdf#member')
+_officer_uri       = rdflib.term.URIRef('urn:edrn:rdf:predicates:program_officer')
 _phone_pred_uri    = rdflib.term.URIRef('http://xmlns.com/foaf/0.1/phone')
 _pi_pred_uri       = rdflib.term.URIRef('http://edrn.nci.nih.gov/rdf/schema.rdf#pi')
+_scientist_uri     = rdflib.term.URIRef('urn:edrn:rdf:predicates:project_scientist')
 _sn_pred_uri       = rdflib.term.URIRef('http://xmlns.com/foaf/0.1/surname')
 _staff_pred_uri    = rdflib.term.URIRef('http://edrn.nci.nih.gov/rdf/schema.rdf#staff')
 _status_pred_uri   = rdflib.term.URIRef('http://edrn.nci.nih.gov/rdf/schema.rdf#employmentActive')
@@ -116,9 +119,10 @@ def get_rdf_people(url: str) -> dict:
     '''
     statements, people = parse(url), {}
     for subject_uri, predicates in statements.items():
+        person_id = urlparse(subject_uri).path.split('/')[-1]
         uid = sv(_account_pred_uri, predicates)
-        if not uid: continue
-        uid = str(uid).lower()
+        if uid:
+            uid = str(uid).lower()
 
         status = sv(_status_pred_uri, predicates)
         if not status:
@@ -140,6 +144,11 @@ def get_rdf_people(url: str) -> dict:
             # Strip the 'mailto:'
             email = str(email[7:])
 
+        if status == status.INACTIVE and uid:
+            _logger.warning('Former person %s (%s, %s) has a user ID "%s"', person_id, sn, gn, uid)
+        elif status == status.ACTIVE and not uid:
+            _logger.warning('Current person %s (%s, %s) has no user ID', person_id, sn, gn)
+
         p = Person(str(uid), str(sn), str(gn), email, str(sv(_phone_pred_uri, predicates)), status, subject_uri)
         people[uid] = p
 
@@ -154,7 +163,7 @@ def get_rdf_sites(rdf_people: dict, url: str) -> dict:
     '''
     people = {i.subject_uri: i for i in rdf_people.values()}
     statements, sites = parse(url), {}
-    for predicates in statements.values():
+    for subject_uri, predicates in statements.items():
         if get_rdf_type(predicates) != _site_type: continue     # Not a Site? Skip it
         title = sv(rdflib.DCTERMS.title, predicates)            # Grab thte name of the site
         title = str(title).strip().replace(',', '')             # DMCC data is always weirdly padded; see [1]
@@ -189,9 +198,10 @@ def get_rdf_collab_groups(rdf_people: dict, url: str) -> dict:
         if chair: members.add(chair)
         cochair = people.get(sv(_cochair_pred_uri, predicates))
         if cochair: members.add(cochair)
-        for person_uri in predicates.get(_member_pred_uri, []):
-            member = people.get(person_uri)
-            if member: members.add(member)
+        for predicate in (_member_pred_uri, _scientist_uri, _officer_uri):
+            for person_uri in predicates.get(predicate, []):
+                member = people.get(person_uri)
+                if member: members.add(member)
         group = Committee(title, members)
         groups[title] = group
     return groups

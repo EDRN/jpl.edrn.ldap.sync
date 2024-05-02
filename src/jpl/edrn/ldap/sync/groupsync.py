@@ -6,7 +6,7 @@ from . import VERSION
 from .constants import USER_RDF_URL, SITE_RDF_URL, COMMITTEE_RDF_URL, GROUP_BASE, GROUP_OBJECT_CLASSES, USER_BASE
 from .rdf import get_rdf_people, get_rdf_sites, get_rdf_collab_groups, Group
 from .utils import add_logging_arguments, add_ldap_arguments, get_manager_password
-import sys, ldap, ldap.modlist, logging, argparse
+import sys, ldap, ldap.modlist, ldap.filter, logging, argparse
 
 __version__ = VERSION
 _logger = logging.getLogger(__name__)
@@ -57,6 +57,15 @@ def main():
     connection = ldap.initialize(args.url)
     password = get_manager_password(args)
     connection.simple_bind_s(args.manager_dn, password)
+
+    # Find obsolete groups?
+    # breakpoint()
+    # group_names = set(rdf_sites.keys())
+    # group_names |= set(rdf_collab_groups.keys())
+    # for group_name in list(group_names):
+    #     query = '(cn=' + ldap.filter.escape_filter_chars(group_name) + ')'
+    #     if connection.search_s('dc=edrn,dc=jpl,dc=nasa,dc=gov', ldap.SCOPE_ONELEVEL, query):
+    #         group_names.remove(group_name)
 
     for group in rdf_sites.values():
         _add_to_ldap(connection, group)
